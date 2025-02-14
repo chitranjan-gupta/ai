@@ -41,9 +41,9 @@ def prompt_ai(messages):
     # First, prompt the AI with the latest user message
     tools = [tool for _, tool in available_functions.items()]
     n8n_chatbot = ChatOllama(model=model)
-    #n8n_chatbot_with_tools = n8n_chatbot.bind_tools(tools)
+    n8n_chatbot_with_tools = n8n_chatbot.bind_tools(tools)
 
-    stream = n8n_chatbot.stream(messages) #n8n_chatbot_with_tools.stream(messages)
+    stream = n8n_chatbot_with_tools.stream(messages)
     first = True
     for chunk in stream:
         if first:

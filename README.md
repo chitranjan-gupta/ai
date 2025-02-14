@@ -230,3 +230,9 @@ Generate requirements.txt
 ```sh
 pip freeze > requirements.txt
 ```
+
+Execute on Docker container
+```sh
+docker ps # to get id of container
+docker exec -it id bash
+```

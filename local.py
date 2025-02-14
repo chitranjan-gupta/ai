@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_ollama.llms import OllamaLLM
-#from langchain_ollama.chat_models import ChatOllama
+from langchain_ollama.chat_models import ChatOllama
 
 import streamlit as st
 import os
@@ -24,8 +24,8 @@ st.title("Langchain OpenAI Chatbot")
 input_text = st.text_input("Enter your question here:")
 
 #ollama llm
-llm = OllamaLLM(model="llama3.2")
-#llm = ChatOllama(model="llama3.2")
+#llm = OllamaLLM(model="llama3.2")
+llm = ChatOllama(model="llama3.2")
 output_parser = StrOutputParser()
 chain = prompt | llm | output_parser
 
