@@ -6,23 +6,12 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 
-var corsOptions = {
-  origin: 'http://localhost:5173',
-  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
-}
-
-const app = express();
-
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(cors(corsOptions));
-
 const ollama = createOllama({
   // optional settings, e.g.
   baseURL: 'http://localhost:11434/api',
 });
 
-const model = ollama('llama3.2');
+const model = ollama('mistral');
 
 async function test(){
     console.time('process')
@@ -88,6 +77,17 @@ async function math() {
 
   console.log(answer);
 }
+
+var corsOptions = {
+  origin: 'http://localhost:5173',
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+}
+
+const app = express();
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(cors(corsOptions));
 
 app.post('/api/chat', async (req, res) => { 
   try {

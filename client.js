@@ -12,23 +12,32 @@ async function test(){
 }
 import { createOllama } from 'ollama-ai-provider';
 import { generateText, streamText, tool } from 'ai';
+import { z } from 'zod';
 const ollama = createOllama({
     // optional settings, e.g.
     baseURL: 'http://localhost:11434/api',
   });
   
-const model = ollama('llama3.2');
+const model = ollama('mistral');
 
-async function testStream(){
-  console.time('process')
-  const { textStream } = streamText({
+async function gen() {  
+  const result = await generateText({
     model: model,
-    prompt: 'Hugging Face is',
+    tools: {
+      weather: tool({
+        description: 'Get the weather in a location',
+        parameters: z.object({
+          location: z.string().describe('The location to get the weather for'),
+        }),
+        execute: async ({ location }) => ({
+          location,
+          temperature: 72 + Math.floor(Math.random() * 21) - 10,
+        }),
+      }),
+    },
+    maxSteps: 5,
+    prompt: 'What is the weather in San Francisco?',
   });
-  for await (const textPart of textStream) {
-    console.log(textPart);
-  }
-  console.timeEnd('process')
+  console.log(result);
 }
-
-void testStream();
+void gen();

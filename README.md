@@ -236,3 +236,18 @@ Execute on Docker container
 docker ps # to get id of container
 docker exec -it id bash
 ```
+
+## Ollama
+```sh
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+## Ollama Serve
+```sh
+ollama serve
+```
+
+## Ollama Run
+```sh
+ollama run deepseek-r1:8b
+```
