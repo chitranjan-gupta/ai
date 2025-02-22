@@ -7,17 +7,12 @@ import {
   embedMany,
   streamText
 } from "ai";
-//import { z } from "zod";
 import { createOllama } from 'ollama-ai-provider';
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { Chroma } from "@langchain/community/vectorstores/chroma"
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { OllamaEmbeddings } from "@langchain/ollama";
-
-const ollama = createOllama({
-    // optional settings, e.g.
-    baseURL: 'http://localhost:11434/api',
-});
+//import { z } from "zod";
+//import { Chroma } from "@langchain/community/vectorstores/chroma"
+//import { OllamaEmbeddings } from "@langchain/ollama";
 
 // schema for validating the custom provider metadata
 // const selectionSchema = z.object({
@@ -25,6 +20,21 @@ const ollama = createOllama({
 //     selection: z.array(z.string()),
 //   }),
 // });
+
+// const modelNames = {
+//   "qwen2.5:1.5b": true,
+//   "llama3.2:3b": true,
+//   "mistral:7b": true
+// }
+
+const modelName = "qwen2.5:1.5b"
+const filename = "DOC-20241003-WA0008..pdf";
+const question = "Who is Utkarsh Kumar and from where he is doing B.Tech and is he eligible for Backend Developer?";
+
+const ollama = createOllama({
+    // optional settings, e.g.
+    baseURL: 'http://localhost:11434/api',
+});
 
 let storage = [];
 
@@ -60,7 +70,7 @@ const ragMiddleware = {
     // Classify the user prompt as whether it requires more context or not
     const { object: classification } = await generateObject({
       // fast model for classification:
-      model: ollama("mistral", { structuredOutputs: true }),
+      model: ollama(modelName, { structuredOutputs: true }),
       output: "enum",
       enum: ["question", "statement", "other"],
       system: "classify the user message as a question, statement, or other",
@@ -76,14 +86,14 @@ const ragMiddleware = {
     // Use hypothetical document embeddings:
     const { text: hypotheticalAnswer } = await generateText({
       // fast model for generating hypothetical answer:
-      model: ollama("mistral", { structuredOutputs: true }),
+      model: ollama(modelName, { structuredOutputs: true }),
       system: "Answer the users question:",
       prompt: lastUserMessageContent,
     });
 
     // Embed the hypothetical answer
     const { embedding: hypotheticalAnswerEmbedding } = await embed({
-      model: ollama.embedding("mistral"),
+      model: ollama.embedding(modelName),
       value: hypotheticalAnswer,
     });
 
@@ -126,27 +136,44 @@ const ragMiddleware = {
   },
 };
 
-async function getPdfContent(url) {
-    // const response = await fetch(url);
-    // const arrayBuffer = await response.arrayBuffer();
-    // const buffer = Buffer.from(arrayBuffer);
-    // const blob = new Blob([buffer], { type: "application/pdf" });
-    const loader = new PDFLoader(url); 
+export async function getPdfContent(url, buffer, options) {
+    console.log("buffer", buffer);
+    if(!url && !buffer){
+      return;
+    }
+    let loader = null;
+    console.log("loader", loader);
+    if(url && !options){
+      options.local = true;
+    }
+    if(url && options && options.remote === true){
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
+    if(buffer){
+      const blob = new Blob([buffer], { type: "application/pdf" });
+      console.log(blob)
+      loader = new PDFLoader(blob);
+    } else if(url && options && options.local === true) {
+      loader = new PDFLoader(url);
+    }
     const content = await loader.load();
     return content;
 }
 
-const filename = "DOC-20241003-WA0008..pdf";
+async function getWebContent(url) {
+  
+}
 
-async function pdfEmbed(url) {
-    const content = await getPdfContent(url);
+export async function pdfEmbed(content) {
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
     });
     const chunkedContent = await textSplitter.splitDocuments(content);
     
     const { embeddings } = await embedMany({
-        model: ollama.embedding("mistral"),
+        model: ollama.embedding(modelName),
         values: chunkedContent.map((chunk) => chunk.pageContent),
     });
   
@@ -158,21 +185,51 @@ async function pdfEmbed(url) {
     }))
 }
 
+const model = ollama(modelName);
+
 const customModel = wrapLanguageModel({
-    model: ollama("mistral"),
+    model: model,
     middleware: ragMiddleware,
 });
 
-async function main() {
+export function plain(messages){
+  const result = streamText({
+    model: model,
+    messages,
+  });
+  return result
+}
+
+export function main(messages) {
+  const result = streamText({
+      model: customModel,
+      system:
+        "you are a friendly assistant! keep your responses concise and helpful.",
+      messages,
+      providerOptions: {
+        files: {
+          selection: [],
+        },
+      },
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "stream-text",
+      },
+  });
+  return result
+}
+
+async function test() {
   console.time("process");
-  await pdfEmbed(`./${filename}`);
+  const content = await getPdfContent(`./${filename}`);
+  await pdfEmbed(content);
   const messages = [
     {
       role: "user",
       content: [
         {
           type: "text",
-          text: "Is utkarsh kumar eligible for Data analytics role?",
+          text: question,
         },
       ],
     },
@@ -197,5 +254,3 @@ async function main() {
   }
   console.timeEnd("process");
 }
-
-main();
