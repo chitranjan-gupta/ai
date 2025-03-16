@@ -10,7 +10,7 @@ import {
 import { createOllama } from 'ollama-ai-provider';
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-//import { z } from "zod";
+import { z } from "zod";
 //import { Chroma } from "@langchain/community/vectorstores/chroma"
 //import { OllamaEmbeddings } from "@langchain/ollama";
 
@@ -27,7 +27,7 @@ import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 //   "mistral:7b": true
 // }
 
-const modelName = "qwen2.5:1.5b"
+const modelName = "mistral"
 const filename = "DOC-20241003-WA0008..pdf";
 const question = "Who is Utkarsh Kumar and from where he is doing B.Tech and is he eligible for Backend Developer?";
 
@@ -185,7 +185,9 @@ export async function pdfEmbed(content) {
     }))
 }
 
-const model = ollama(modelName);
+const model = ollama(modelName,{
+  simulateStreaming: true
+});
 
 const customModel = wrapLanguageModel({
     model: model,
@@ -196,6 +198,42 @@ export function plain(messages){
   const result = streamText({
     model: model,
     messages,
+  });
+  return result
+}
+
+export function withTool(messages){
+  const result = streamText({
+    model: model,
+    messages,
+    toolCallStreaming: true,
+    tools: {
+      // server-side tool with execute function:
+      getWeatherInformation: {
+        description: 'show the weather in a given city to the user',
+        parameters: z.object({ city: z.string() }),
+        execute: async ({}) => {
+          const weatherOptions = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy'];
+          return weatherOptions[
+            Math.floor(Math.random() * weatherOptions.length)
+          ];
+        },
+      },
+      // client-side tool that starts user interaction:
+      askForConfirmation: {
+        description: 'Ask the user for confirmation.',
+        parameters: z.object({
+          message: z.string().describe('The message to ask for confirmation.'),
+        }),
+      },
+      // client-side tool that is automatically executed on the client:
+      getLocation: {
+        description:
+          'Get the user location. Always ask for confirmation before using this tool.',
+        parameters: z.object({}),
+      },
+    },
+    maxSteps: 5,
   });
   return result
 }

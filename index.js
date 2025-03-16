@@ -2,7 +2,7 @@ import multer from "multer";
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { main, plain, getPdfContent, pdfEmbed } from "./rag.js";
+import { main, plain, getPdfContent, pdfEmbed, withTool } from "./rag.js";
 
 const storage = multer.memoryStorage()
 
@@ -32,16 +32,18 @@ app.use(cors(corsOptions));
 app.post("/api/chat", async (req, res) => {
   try {
     const rag = false;
+    const tool = true;
     const modelName = req.body.modelName;
     const messages = req.body.messages;
     if (messages) {
-      const result = rag ? main(messages) : plain(messages);
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      res.status(200);
-      for await (const textPart of result.textStream) {
-        res.write(textPart);
-      }
-      res.end();
+      const result = tool ? rag ? main(messages): withTool(messages) : plain(messages);
+      result.pipeDataStreamToResponse(res);
+      // res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      // res.status(200);
+      // for await (const textPart of result.textStream) {
+      //   res.write(textPart);
+      // }
+      // res.end();
     } else {
       res.status(400).send("Messages is missing");
     }
