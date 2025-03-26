@@ -1,5 +1,5 @@
 import { Ollama, OllamaEmbedding } from "@llamaindex/ollama";
-import { Document, VectorStoreIndex, Settings, storageContextFromDefaults } from "llamaindex";
+import { Document, VectorStoreIndex, Settings, agent } from "llamaindex";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 
 import fs from "fs/promises";
@@ -19,32 +19,30 @@ async function main() {
   //const document = new Document({ text: essay[0].pageContent, id_: "essay" });
   const document = new Document({ text: essay, id_: "essay"});
 
-  const storageContext = await storageContextFromDefaults({
-      persistDir: "./storage",
-  });
-
   // Load and index documents
-  const index = await VectorStoreIndex.fromDocuments([document], {
-    storageContext
-  });
+  const index = await VectorStoreIndex.fromDocuments([document]);
  
   // get retriever
-  const retriever = index.asRetriever();
- 
-  // Create a query engine
-  const queryEngine = index.asQueryEngine({
-    retriever,
-  });
- 
+  const retriever = index.asRetriever({ similarityTopK: 10 });
+
   const query = "Who is Utkarsh?";
- 
-  // Query
-  const response = await queryEngine.query({
-    query,
-  });
- 
-  // Log the response
-  console.log(response.message);
+
+  const tools = [
+    index.queryTool({
+      metadata: {
+        name: "utkarsh_rag_tool",
+        description: `This tool to get details about Utkarsh`,
+      },
+    }),
+  ];
+   
+  // Create an agent using the tools array
+  const ragAgent = agent({ tools });
+   
+  let toolResponse = await ragAgent.run(query);
+   
+  console.log(toolResponse);
+  
 }
 
 main();
