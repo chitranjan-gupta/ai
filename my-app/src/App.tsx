@@ -1,66 +1,95 @@
 import './App.css'
 import useOllama from './hook'
 import Tesseract from 'tesseract.js';
-import { Ollama, OllamaEmbedding } from "@llamaindex/ollama";
-import { Document, VectorStoreIndex, Settings, storageContextFromDefaults, SimpleDocumentStore, SimpleIndexStore, SimpleVectorStore } from "llamaindex";
+// import { Ollama, OllamaEmbedding } from "@llamaindex/ollama";
+// import { Document, VectorStoreIndex, Settings, storageContextFromDefaults, SimpleDocumentStore, SimpleIndexStore, SimpleVectorStore } from "llamaindex";
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 pdfjsLib.GlobalWorkerOptions.workerPort = new pdfjsWorker();
 
-async function test(text: string) {
-  const ollama = new Ollama({ model: "llama3.2" });
-  const ollamaEmbedding = new OllamaEmbedding({ model: "llama3.2" });
+// async function test() {
+//   const ollama = new Ollama({ model: "llama3.2" });
+//   const ollamaEmbedding = new OllamaEmbedding({ model: "llama3.2" });
 
-  // Use Ollama LLM and Embed Model
-  Settings.llm = ollama;
-  Settings.embedModel = ollamaEmbedding;
+//   // Use Ollama LLM and Embed Model
+//   Settings.llm = ollama;
+//   Settings.embedModel = ollamaEmbedding;
 
-  const document = new Document({ text: text, id_: "essay" });
+//   const documentDict = localStorage.getItem("documentDict");
+//   const indexDict = localStorage.getItem("indexDict");
+//   const vectorDict = localStorage.getItem("vectorDict");
 
-  const documentDict = null; //localStorage.getItem("documentDict");
-  const indexDict = null; //localStorage.getItem("indexDict");
-  const vectorDict = null; // localStorage.getItem("vectorDict");
+//   const simpleDocumentStore = documentDict ? SimpleDocumentStore.fromDict(JSON.parse(documentDict)) : new SimpleDocumentStore();
+//   const simpleIndexStore = indexDict ? SimpleIndexStore.fromDict(JSON.parse(indexDict)) : new SimpleIndexStore();
+//   const simpleVectorStore = vectorDict ? SimpleVectorStore.fromDict(JSON.parse(vectorDict)) : new SimpleVectorStore();
 
-  const simpleDocumentStore = documentDict ? SimpleDocumentStore.fromDict(JSON.parse(documentDict)) : new SimpleDocumentStore();
-  const simpleIndexStore = indexDict ? SimpleIndexStore.fromDict(JSON.parse(indexDict)) : new SimpleIndexStore();
-  const simpleVectorStore = vectorDict ? SimpleVectorStore.fromDict(JSON.parse(vectorDict)) : new SimpleVectorStore();
+//   const storageContext = await storageContextFromDefaults({
+//     docStore: simpleDocumentStore,
+//     vectorStore: simpleVectorStore,
+//     indexStore: simpleIndexStore
+//   });
 
-  const storageContext = await storageContextFromDefaults({
-    docStore: simpleDocumentStore,
-    vectorStore: simpleVectorStore,
-    indexStore: simpleIndexStore
-  })
+//   // Load and index documents
+//   const index = await VectorStoreIndex.fromDocuments([], {
+//     storageContext
+//   });
 
-  // Load and index documents
-  const index = await VectorStoreIndex.fromDocuments([document], {
-    storageContext
-  });
+//   // get retriever
+//   const retriever = index.asRetriever();
 
-  // get retriever
-  const retriever = index.asRetriever();
+//   // Create a query engine
+//   const queryEngine = index.asQueryEngine({
+//     retriever,
+//   });
 
-  // Create a query engine
-  const queryEngine = index.asQueryEngine({
-    retriever,
-  });
+//   const query = "Who is Bini Pandey and from where he is doing BCA and is he eligible for Backend Developer?";
 
-  const query = "Who is Bini Pandey and from where he is doing BCA and is he eligible for Backend Developer?";
+//   // Query
+//   const response = await queryEngine.query({
+//     query,
+//   });
 
-  // Query
-  const response = await queryEngine.query({
-    query,
-  });
+//   // Log the response
+//   console.log(response.message);
+// }
 
-  // Log the response
-  console.log(response.message);
-  
-  //localStorage.setItem("documentDict", JSON.stringify(simpleDocumentStore.toDict()));
-  //localStorage.setItem("indexDict", JSON.stringify(simpleIndexStore.toDict()));
-  //localStorage.setItem("vectorDict", JSON.stringify(simpleVectorStore.toDict()));
-}
+// async function saveContext(text: string){
+//   const ollama = new Ollama({ model: "llama3.2" });
+//   const ollamaEmbedding = new OllamaEmbedding({ model: "llama3.2" });
+
+//   // Use Ollama LLM and Embed Model
+//   Settings.llm = ollama;
+//   Settings.embedModel = ollamaEmbedding;
+
+//   const document = new Document({ text: text, id_: "essay" });
+
+//   const documentDict = localStorage.getItem("documentDict");
+//   const indexDict = localStorage.getItem("indexDict");
+//   const vectorDict = localStorage.getItem("vectorDict");
+
+//   const simpleDocumentStore = documentDict ? SimpleDocumentStore.fromDict(JSON.parse(documentDict)) : new SimpleDocumentStore();
+//   const simpleIndexStore = indexDict ? SimpleIndexStore.fromDict(JSON.parse(indexDict)) : new SimpleIndexStore();
+//   const simpleVectorStore = vectorDict ? SimpleVectorStore.fromDict(JSON.parse(vectorDict)) : new SimpleVectorStore();
+
+//   const storageContext = await storageContextFromDefaults({
+//     docStore: simpleDocumentStore,
+//     vectorStore: simpleVectorStore,
+//     indexStore: simpleIndexStore
+//   })
+
+//   // Load and index documents
+//   await VectorStoreIndex.fromDocuments([document], {
+//     storageContext
+//   });
+
+//   localStorage.setItem("documentDict", JSON.stringify(simpleDocumentStore.toDict()));
+//   localStorage.setItem("indexDict", JSON.stringify(simpleIndexStore.toDict()));
+//   localStorage.setItem("vectorDict", JSON.stringify(simpleVectorStore.toDict()));
+
+// }
 
 function App() {
-  const { messages, stop, reload, loading, error, input, handleInputChange, handleSubmit } = useOllama({
+  const { messages, stop, reload, loading, error, input, handleInputChange, handleSubmit, addContext } = useOllama({
     api: 'http://localhost:11434',
     modelName: 'llama3.2',
     initialMessages: []
@@ -73,7 +102,7 @@ function App() {
           const file = files.length > 0 ? files[0] : null;
           if (file) {
             if (file.type.includes("image")) {
-              Tesseract.recognize(
+              const text = await Tesseract.recognize(
                 file,
                 'eng',
                 {
@@ -83,9 +112,8 @@ function App() {
                     }
                   }
                 }
-              ).then(({ data: { text } }) => {
-                console.log("text", text)
-              });
+              ).then(({ data: { text } }) => text);
+              console.log(text);
             } else if (file.type.includes("text")) {
               const fileReader = new FileReader();
               fileReader.onload = () => {
@@ -102,8 +130,7 @@ function App() {
                           const pageText = textContent.items.map((item) => (item as unknown as { str: string }).str).join('');
                           pdfText += pageText + '\n';
                           if (i === numPages) {
-                            console.log(pdfText)
-                            test(pdfText)
+                            addContext(file.name, pdfText);
                           }
                         });
                       });
@@ -139,8 +166,7 @@ function App() {
 
                 allText += text + '\n\n';
               }
-              console.log(allText)
-              test(allText)
+              addContext(file.name, allText);
             }
           }
         }

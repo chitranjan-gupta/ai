@@ -17,7 +17,7 @@ const useOllama = ({ api, modelName, initialMessages }: useOllamaProps) => {
 
     useEffect(() => {
         if(!hasInitialized.current && !context.ollama?.current){
-            context.initialise(api, modelName, initialMessages)
+            context.initialise(api, modelName, initialMessages);
             hasInitialized.current = true;
         }
     }, [api, context, initialMessages, modelName]);
